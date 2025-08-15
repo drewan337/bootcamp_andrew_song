@@ -1,42 +1,44 @@
-# Project Title: Portfolio Optimization Engine  
-**Stage:** Problem Framing & Scoping (Stage 01)  
+# Project Title: Tomorrow's Stock Trend Predictor
+**Stage:** Problem Framing & Scoping (Stage 01)
 
-### Problem Statement  
-Investment firms face significant challenges in optimizing portfolio allocations due to volatile markets, complex regulatory constraints, and conflicting risk-return objectives. This problem is critical because suboptimal asset allocation can lead to underperformance, regulatory penalties, or excessive risk exposure. A quantitative solution could enhance decision-making while ensuring compliance.
+## Problem Statement
+Day traders struggle to identify reliable short-term opportunities in volatile markets. This project predicts next-day price movements (up/down) for liquid stocks using technical indicators, helping retail investors make data-driven decisions without requiring advanced financial expertise. The solution matters because even a 55-60% prediction accuracy could significantly improve trading outcomes compared to random guessing.
 
-### Stakeholder & User  
-- **Primary Stakeholder:** Chief Investment Officer (CIO) at Hedge Fund XYZ  
-- **End Users:** Portfolio managers (execute trades), Risk analysts (monitor exposures)  
-- **Workflow Context:** Quarterly rebalancing cycle; must integrate with Bloomberg/Reuters APIs  
+## Stakeholder & User
+- **Primary Stakeholder:** Retail trading platform (e.g., Robinhood)
+- **End User:** Individual day traders
+- **Workflow Context:** Predictions generated daily after market close, consumed via email/API before next trading session
 
-### Useful Answer & Decision  
-**Type:** Predictive optimization model  
-**Metrics:**  
-- Target Sharpe ratio ≥ 2.0  
-- VaR < 5% at 99% confidence  
-**Artifact:** Python library generating compliant trade lists  
+## Useful Answer & Decision
+- **Type:** Predictive binary classification
+- **Metric:** >60% test accuracy (benchmarked against S&P 500's 52% baseline)
+- **Artifact:** 
+  - Daily prediction report (CSV)
+  - Jupyter notebook with backtesting visuals
 
-### Assumptions & Constraints  
-- Data: Clean OHLCV for 500+ assets via API  
-- Latency: < 4 hours post-market close  
-- Compliance: SEC Rule 18f-4 compliant  
-- Capacity: $10B AUM threshold  
+## Assumptions & Constraints
+- Data: Market datas, assumed to be mostly clean, is available from public API
+- Tools: Python (yfinance, scikit-learn), calculation can be done on a personal laptop
+- Compliance: No insider/alternative data used
 
-### Known Unknowns / Risks  
-1. Black-swan event impacts on correlation structures  
-   *Mitigation:* Monthly stress-testing  
-2. Behavioral biases in trade execution  
-   *Mitigation:* Backtest with slippage models  
+## Known Unknowns / Risks
+- Impact of breaking news events (mitigation: exclude earnings weeks)
+- Model overfitting to noise (mitigation: time-series cross-validation)
+- API rate limits (mitigation: cache historical data)
 
-### Lifecycle Mapping  
-| Goal                | Stage                 | Deliverable                     |
-|---------------------|-----------------------|---------------------------------|
-| Optimize allocations| Problem Framing       | Scoping document (this file)    |
-| Validate strategy   | Backtesting (Stage 03)| Performance report (Notebook 03)|
+## Lifecycle Mapping
+Goal → Stage → Deliverable
+- Define prediction problem & scope → Problem Framing & Scoping (Stage 01) → README.md + stakeholder memo
+- Collect/preprocess stock data → Data Collection & Preprocessing (Stage 02) → Cleaned dataset (CSV) + data dictionary
+- Identify key technical indicators → Exploratory Data Analysis (Stage 03) → EDA notebook + feature importance report
+- Train price direction classifier → Modeling (Stage 04) → Pickled model + accuracy metrics
+- Validate with historical data → Backtesting (Stage 05) → Walk-forward validation results
+- Generate daily predictions → Deployment (Stage 06) → Daily buy/sell signals (CSV)
+- Monitor live accuracy → Performance Tracking (Stage 07) → Weekly accuracy dashboard
 
-### Repo Plan  
-- `/data/`: Sample market data (CSV/Parquet)  
-- `/src/`: Optimization engine (CVaR, Black-Litterman)  
-- `/notebooks/`: Jupyter backtests  
-- `/docs/`: Compliance memos (SEC/SFTR)  
-**Update Cadence:** Weekly model recalibration  
+## Repo Plan
+- /data/: OHLCV CSVs + news headlines
+- /src/: feature_engineering.py, prediction_model.py
+- /notebooks/: EDA, model training, backtesting
+- /docs/: User guide for interpreting signals
+- **Update Cadence:** Daily predictions at market close + weekly model retraining
