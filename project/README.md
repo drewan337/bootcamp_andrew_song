@@ -42,3 +42,21 @@ Goal → Stage → Deliverable
 - /notebooks/: EDA, model training, backtesting
 - /docs/: User guide for interpreting signals
 - **Update Cadence:** Daily predictions at market close + weekly model retraining
+
+
+## Data Storage
+- **Raw Data**: `data/raw/` - Original TSLA data from Yahoo Finance
+- **Processed Data**: `data/processed/` - Cleaned data with technical indicators
+- **Formats**: CSV files with timestamped filenames
+- **Environment**: Paths configured via `.env` file
+
+## Key Features
+- **Data Acquisition**: Yahoo Finance API integration
+- **Technical Indicators**: SMA, Returns, Volatility calculations
+- **Target Variable**: Next-day price direction prediction
+- **Modular Code**: Reusable functions across all stages
+
+## Usage
+1. Set up environment variables in `.env`
+2. Run notebooks in sequence from Stage 03 to Stage 06
+3. Data flows through: Acquisition → Storage → Preprocessing → Modeling
