@@ -28,3 +28,12 @@ def normalize_data(df, columns):
                 )
     
     return df_normalized
+
+def clean_dataset(df, numeric_columns, drop_threshold=0.5):
+    df_clean = drop_missing(df, threshold=drop_threshold)
+
+    df_clean = fill_missing_median(df_clean, numeric_columns)
+    
+    df_clean = normalize_data(df_clean, numeric_columns)
+    
+    return df_clean
