@@ -49,6 +49,10 @@ Goal → Stage → Deliverable
 - **Processed Data**: `data/processed/` - Cleaned data with technical indicators
 - **Formats**: CSV files with timestamped filenames
 - **Environment**: Paths configured via `.env` file
+**File Operations:**
+- Unified read/write functions in `src/utils.py`
+- Automatic format detection (CSV/Parquet)
+- Environment-driven path handling
 
 ## Key Features
 - **Data Acquisition**: Yahoo Finance API integration

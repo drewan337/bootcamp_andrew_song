@@ -1,91 +1,110 @@
+import os
+import pathlib
+import datetime as dt
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
-import yfinance as yf
-from pathlib import Path
-import os
-from dotenv import load_dotenv
+from typing import Union, Dict, Any, List
 
-def fetch_tsla_data(period="1y", interval="1d"):
-    try:
-        tsla = yf.Ticker("TSLA")
-        df = tsla.history(period=period, interval=interval)
-        df.reset_index(inplace=True)
-        df['Ticker'] = 'TSLA'
-        return df
-    except Exception as e:
-        print(f"Error fetching TSLA data: {e}")
-        return generate_sample_tsla_data()
+def ts() -> str:
+    """Generate timestamp string for consistent filenames."""
+    return dt.datetime.now().strftime('%Y%m%d-%H%M%S')
 
-def generate_sample_tsla_data(days=100, start_price=150):
+def validate_data(df: pd.DataFrame, required_columns: list) -> Dict[str, Any]:
+    """Validate DataFrame structure and data quality."""
+    validation = {
+        'missing_columns': [col for col in required_columns if col not in df.columns],
+        'shape': df.shape,
+        'na_total': int(df.isna().sum().sum()),
+        'na_by_column': df.isna().sum().to_dict(),
+        'dtypes': df.dtypes.to_dict()
+    }
+    return validation
 
-    # Generate sample TSLA data using random walk pattern.
-    dates = pd.date_range(end=datetime.now(), periods=days, freq='D')
-    prices = [start_price]
+def detect_format(path: Union[str, pathlib.Path]) -> str:
+    """Detect file format from extension."""
+    path_str = str(path).lower()
+    if path_str.endswith('.csv'):
+        return 'csv'
+    if any(path_str.endswith(ext) for ext in ['.parquet', '.pq', '.parq']):
+        return 'parquet'
+    raise ValueError(f'Unsupported format: {path_str}')
+
+def read_df(path: Union[str, pathlib.Path]) -> pd.DataFrame:
+    """Read DataFrame from file with automatic format detection."""
+    path_obj = pathlib.Path(path)
+    fmt = detect_format(path_obj)
     
-    # Random walk pattern
-    for i in range(1, days):
-        change = np.random.normal(0, 2)
-        new_price = prices[-1] + change
-        prices.append(max(10, new_price))
+    if fmt == 'csv':
+        try:
+            sample = pd.read_csv(path_obj, nrows=5)
+            date_cols = [col for col in sample.columns if 'date' in col.lower()]
+            if date_cols:
+                return pd.read_csv(path_obj, parse_dates=date_cols)
+            return pd.read_csv(path_obj)
+        except Exception as e:
+            raise RuntimeError(f'Failed to read CSV: {e}')
     
-    # DataFrame structure pattern
-    df = pd.DataFrame({
-        'Date': dates,
-        'Ticker': 'TSLA',
-        'Open': [p * 0.99 for p in prices],
-        'High': [p * 1.02 for p in prices],
-        'Low': [p * 0.98 for p in prices],
-        'Close': prices,
-        'Volume': np.random.randint(1000000, 50000000, size=days)
-    })
+    elif fmt == 'parquet':
+        try:
+            return pd.read_parquet(path_obj)
+        except Exception as e:
+            raise RuntimeError('Parquet engine not available. Install pyarrow or fastparquet.')
+
+def write_df(df: pd.DataFrame, path: Union[str, pathlib.Path]) -> pathlib.Path:
+    """Write DataFrame to file with automatic format detection."""
+    path_obj = pathlib.Path(path)
+    path_obj.parent.mkdir(parents=True, exist_ok=True)
+    fmt = detect_format(path_obj)
+    
+    if fmt == 'csv':
+        df.to_csv(path_obj, index=False)
+    elif fmt == 'parquet':
+        try:
+            df.to_parquet(path_obj)
+        except Exception as e:
+            raise RuntimeError('Parquet engine not available. Install pyarrow or fastparquet.')
+    
+    return path_obj
+
+def calculate_technical_indicators(df: pd.DataFrame, price_col: str = 'close') -> pd.DataFrame:
+    """Calculate common technical indicators for stock data."""
+    df = df.copy()
+    
+    # Simple Moving Averages
+    df['sma_10'] = df[price_col].rolling(window=10).mean()
+    df['sma_20'] = df[price_col].rolling(window=20).mean()
+    df['sma_50'] = df[price_col].rolling(window=50).mean()
+    
+    # Price Returns
+    df['daily_return'] = df[price_col].pct_change()
+    df['weekly_return'] = df[price_col].pct_change(5)
+    
+    # Volatility
+    df['volatility_10'] = df['daily_return'].rolling(window=10).std()
+    df['volatility_20'] = df['daily_return'].rolling(window=20).std()
+    
+    # Price vs SMA ratios
+    df['price_sma_10_ratio'] = df[price_col] / df['sma_10']
+    df['price_sma_20_ratio'] = df[price_col] / df['sma_20']
     
     return df
 
-def calculate_technical_indicators(df, price_column='Close'):
-    
-    # Calculate technical indicators
-    df_tech = df.copy()
-    
-    # Moving average pattern
-    df_tech['SMA_20'] = df_tech[price_column].rolling(window=20).mean()
-    df_tech['SMA_50'] = df_tech[price_column].rolling(window=50).mean()
-    
-    # Volatility pattern
-    df_tech['Daily_Return'] = df_tech[price_column].pct_change()
-    df_tech['Volatility_10d'] = df_tech['Daily_Return'].rolling(window=10).std()
-    
-    # Price change pattern
-    df_tech['Price_Change'] = df_tech[price_column].diff()
-    
-    return df_tech
+# Storage utility functions (for use in notebooks)
+def list_data_files(directory: Union[str, pathlib.Path], pattern: str = "*") -> List[pathlib.Path]:
+    """List files in a data directory."""
+    dir_path = pathlib.Path(directory)
+    return list(dir_path.glob(pattern))
 
-def create_target_variable(df, price_column='Close', days_forward=1):
-    
-    # Create target variable
-    df_target = df.copy()
-    df_target['Future_Price'] = df_target[price_column].shift(-days_forward)
-    df_target['Price_Change_Future'] = df_target['Future_Price'] - df_target[price_column]
-    df_target['Target'] = (df_target['Price_Change_Future'] > 0).astype(int)
-    
-    return df_target
+def get_latest_file(directory: Union[str, pathlib.Path], pattern: str = "*") -> pathlib.Path:
+    """Get the most recent file in a directory."""
+    files = list_data_files(directory, pattern)
+    if not files:
+        raise FileNotFoundError(f"No files found in {directory} matching {pattern}")
+    return max(files, key=lambda x: x.stat().st_mtime)
 
-def get_data_paths():
-    # Get data paths from environment variables using your pattern.
-    load_dotenv()
-    raw_dir = Path(os.getenv('DATA_DIR_RAW', 'data/raw'))
-    processed_dir = Path(os.getenv('DATA_DIR_PROCESSED', 'data/processed'))
-    raw_dir.mkdir(parents=True, exist_ok=True)
-    processed_dir.mkdir(parents=True, exist_ok=True)
-    return raw_dir, processed_dir
-
-def save_dataframe(df, filename, directory='processed'):
-    
-    # Save DataFrame
-    raw_dir, processed_dir = get_data_paths()
-    target_dir = processed_dir if directory == 'processed' else raw_dir
-    target_dir.mkdir(parents=True, exist_ok=True)
-    
-    filepath = target_dir / filename
-    df.to_csv(filepath, index=False)
-    return filepath
+def ensure_data_directories():
+    """Ensure all data directories exist."""
+    directories = ['data/raw', 'data/processed', 'data/backup']
+    for dir_path in directories:
+        pathlib.Path(dir_path).mkdir(parents=True, exist_ok=True)
+    print("Data directories ensured: raw, processed, backup")
