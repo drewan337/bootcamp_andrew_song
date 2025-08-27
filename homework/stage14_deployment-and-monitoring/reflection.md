@@ -1,0 +1,8 @@
+Risks of Deployment
+If deployed, our current sales prediction model faces several risks. Data drift could occur as consumer behavior changes seasonally, making historical patterns less relevant. Feature availability risks exist if external data sources (like economic indicators) become unavailable or delayed. Model degradation is likely as market conditions evolve, reducing prediction accuracy over time. Additionally, system failures could interrupt prediction services, while biased predictions might lead to poor business decisions if not caught early.
+
+Monitoring Across Four Layers
+Data Layer: Monitor feature distributions (PSI < 0.1), null rates (<2%), and data freshness (<1 hour delay). Model Layer: Track rolling 7-day MAE (<15% increase from baseline) and prediction drift (KL divergence < 0.05). System Layer: Monitor API latency (p95 < 500ms), uptime (>99.9%), and throughput (requests/minute). Business Layer: Track forecast accuracy vs. actual sales (>85% correlation) and business impact (ROI of predictions).
+
+Ownership and Maintenance
+The Data Science team owns model retraining and performance monitoring, with bi-weekly reviews. Platform Engineering owns system reliability and incident response. Retraining triggers include: 5% PSI on key features, 2-week rolling MAE increase >15%, or scheduled monthly updates. Handoffs occur through documented runbooks in GitHub, with alerts routed to Slack channels. The Product Manager approves major model updates and rollbacks, while issues are logged in Jira with clear escalation paths.
