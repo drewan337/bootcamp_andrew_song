@@ -64,3 +64,15 @@ Goal → Stage → Deliverable
 1. Set up environment variables in `.env`
 2. Run notebooks in sequence from Stage 03 to Stage 06
 3. Data flows through: Acquisition → Storage → Preprocessing → Modeling
+
+
+## Setup Instructions
+
+1. Clone the repository:
+```bash
+git clone <your-repo-url>
+cd tsla-project
+
+2. pip install -r requirements.txt
+
+3. python app.py
