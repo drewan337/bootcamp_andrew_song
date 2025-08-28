@@ -4,6 +4,12 @@ import datetime as dt
 import pandas as pd
 import numpy as np
 from typing import Union, Dict, Any, List
+import matplotlib.pyplot as plt
+import seaborn as sns
+import pickle
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.preprocessing import StandardScaler
 
 def ts() -> str:
     """Generate timestamp string for consistent filenames."""
@@ -108,3 +114,76 @@ def ensure_data_directories():
     for dir_path in directories:
         pathlib.Path(dir_path).mkdir(parents=True, exist_ok=True)
     print("Data directories ensured: raw, processed, backup")
+
+
+def load_data(file_path):
+    """Load and prepare the processed TSLA data"""
+    df = pd.read_csv(file_path, parse_dates=['date'])
+    df.set_index('date', inplace=True)
+    
+    # Handle missing values
+    numeric_cols = df.select_dtypes(include=[np.number]).columns
+    df[numeric_cols] = df[numeric_cols].ffill()
+    df.dropna(inplace=True)
+    
+    return df
+
+def prepare_features(df):
+    """Prepare features and target variable"""
+    feature_columns = [
+        'open', 'high', 'low', 'close', 'volume', 
+        'sma_10', 'sma_20', 'sma_50', 
+        'daily_return', 'weekly_return', 
+        'volatility_10', 'volatility_20',
+        'price_sma_10_ratio', 'price_sma_20_ratio'
+    ]
+    
+    available_features = [col for col in feature_columns if col in df.columns]
+    X = df[available_features]
+    y = df['target']
+    
+    return X, y, available_features
+
+def train_model(X_train, y_train):
+    """Train and return Random Forest model"""
+    model = RandomForestClassifier(
+        n_estimators=100,
+        random_state=42,
+        max_depth=5,
+        min_samples_split=10
+    )
+    model.fit(X_train, y_train)
+    return model
+
+def save_model(model, file_path):
+    """Save trained model to file"""
+    with open(file_path, 'wb') as f:
+        pickle.dump(model, f)
+
+def load_model(file_path):
+    """Load trained model from file"""
+    with open(file_path, 'rb') as f:
+        return pickle.load(f)
+
+def generate_plots(df, predictions, output_path):
+    """Generate and save analysis plots"""
+    plt.figure(figsize=(12, 6))
+    cumulative_returns = (1 + df['actual_return']).cumprod()
+    plt.plot(cumulative_returns)
+    plt.title('Cumulative Strategy Returns')
+    plt.ylabel('Cumulative Return')
+    plt.grid(True)
+    plt.savefig(f'{output_path}/cumulative_returns.png')
+    plt.close()
+    
+    # Feature importance plot
+    plt.figure(figsize=(10, 6))
+    importance = pd.DataFrame({
+        'feature': X_train.columns,
+        'importance': model.feature_importances_
+    }).sort_values('importance', ascending=True)
+    plt.barh(importance['feature'], importance['importance'])
+    plt.title('Feature Importance')
+    plt.tight_layout()
+    plt.savefig(f'{output_path}/feature_importance.png')
+    plt.close()
